@@ -37,6 +37,7 @@ public class PPPC{
     private JRadioButton internetCheckBtn, documentCheckBtn;
     private DataClass dataClass;
     private DocumentReaderClass readerClass;
+    private PlagiarismCheckerClass plagChecker;
     private JButton checkBtn;
     private JButton selectDocumentsBtn;
     private JButton selectReportPathBtn;
@@ -100,6 +101,7 @@ public class PPPC{
 
         dataClass = new DataClass();
         readerClass = new DocumentReaderClass(dataClass);
+        plagChecker = new PlagiarismCheckerClass(dataClass);
 
         mainLayout = new GridBagLayout();
         buttonLayout = new GridBagLayout();
@@ -115,6 +117,8 @@ public class PPPC{
                 "doc", "docx", "odt");
         chooser.setFileFilter(filter);
         reportChooser = new JFileChooser();
+
+        dataClass.setCheckType(0);
 
         build();
 
@@ -268,7 +272,7 @@ public class PPPC{
             for (String docs : dataClass.getDocumentList()){
                 readerClass.setFilePath(docs);
                 readerClass.readFile();
-                System.out.println(dataClass.getDocumentContent());
+                plagChecker.checkForPlagiarism();
             }
         });
     }
