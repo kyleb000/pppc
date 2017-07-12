@@ -12,23 +12,32 @@ import org.apache.poi.xwpf.extractor.*;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTP;
 import javax.xml.namespace.QName;
 
+//TODO: add powerpoint and excel file support, as well as the ability to read from tables, graphs and wordart / fontwork
 class DocumentReaderClass {
     private String filePath;
     private FileInputStream fis;
+    private DataClass dataClass;
+    private StringBuffer documentContent = new StringBuffer();
 
-    DocumentReaderClass(){
-
+    DocumentReaderClass(DataClass dataClass){
+        this.dataClass = dataClass;
     }
 
     void setFilePath(String filePath){
         this.filePath = filePath;
     }
 
+    //extracts the file extension so we can determine how to read the document
     private String getFileExtensionType(String path){
         boolean stop = false;
         char[] string = path.toCharArray();
+
+        //we want the size to be able to stay in the range of the array
+
         int size = path.length() - 1;
         StringBuilder returnString = new StringBuilder();
+
+        //extracts all characters after the '.'
         while (!stop){
             if (string[size] == '.'){
                 stop = true;
@@ -43,10 +52,14 @@ class DocumentReaderClass {
 
     void readFile(){
         try {
+
+            //reads the file
             fis = new FileInputStream(new File(filePath));
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+
+        //calls the relevant function to read from the relevant file
         switch (getFileExtensionType(filePath)){
             case "docx":
                 readDocxFile();
@@ -62,49 +75,63 @@ class DocumentReaderClass {
         }
     }
 
+    //Function to read Microsoft .doc files
     private void readDocFile(){
         try {
             WordExtractor extractor;
             HWPFDocument document = new HWPFDocument(fis);
             extractor = new WordExtractor(document);
-            System.out.println(extractor.getText());
-            System.out.println();
+            documentContent.append(extractor.getText());
+            dataClass.setDocumentContent(documentContent.toString());
+            documentContent.setLength(0);
         }catch (IOException e){
             e.printStackTrace();
         }
     }
 
+    //Function to read Microsoft .docx files
     private void readDocxFile(){
         try {
             XWPFDocument doc = new XWPFDocument(fis);
             XWPFWordExtractor extract = new XWPFWordExtractor(doc);
-            System.out.println(extract.getText());
+            documentContent.append(extract.getText());
+
+            //gets all textboxes from each paragraph in the document
             for (XWPFParagraph xwpfParagraph : doc.getParagraphs()) {
                 printContentsOfTextBox(xwpfParagraph);
             }
+
+            dataClass.setDocumentContent(documentContent.toString());
+            documentContent.setLength(0);
         } catch (IOException e){
             e.printStackTrace();
         }
     }
 
+    //Function to read Open Document .odt files
     private void readOdtFile(){
         try {
             int i = 0;
             TextDocument document = TextDocument.loadDocument(filePath);
 
+            //gets all paragraphs one by one and breaks the loop when we cannot find more paragraphs
             while (true) {
                 try {
                     Paragraph paragraph = document.getParagraphByIndex(i, false);
                     int j = 1;
+
+                    //gets every textbox from each paragraph
                     while (true) {
                         String name = "Shape" + String.valueOf(j);
                         try {
 
                             Textbox textbox = paragraph.getTextboxByName(name);
-                            System.out.println(textbox.getTextContent());
+                            documentContent.append(textbox.getTextContent());
                             j++;
 
                         } catch (NullPointerException e) {
+
+                            //We look for 1000 potential textboxes before breaking the loop
                             if (j <= 1000){
                                 j++;
                             } else {
@@ -112,10 +139,14 @@ class DocumentReaderClass {
                             }
                         }
                     }
-                    System.out.println(paragraph.getTextContent());
+                    documentContent.append(paragraph.getTextContent());
 
                     i++;
+
+                //we know we are done when we get here
                 } catch (Exception e){
+                    dataClass.setDocumentContent(documentContent.toString());
+                    documentContent.setLength(0);
                     break;
                 }
             }
@@ -124,11 +155,15 @@ class DocumentReaderClass {
         }
     }
 
+
+    //this function allows us to get the text box data from docx file by accessing the XML element of the textbox
     private void printContentsOfTextBox(XWPFParagraph paragraph) {
 
+        //gets all the text boxes using the defined schemas and namespaces
         XmlObject[] textBoxObjects =  paragraph.getCTP().selectPath("declare namespace w='http://schemas.openxmlformats.org/wordprocessingml/2006/main' " +
                 "declare namespace wps='http://schemas.microsoft.com/office/word/2010/wordprocessingShape' .//*/wps:txbx/w:txbxContent");
 
+        //goes through each text box, extracts its contents and prints its contents
         for (XmlObject textBoxObject : textBoxObjects) {
             XWPFParagraph embeddedPara;
             try {
@@ -140,7 +175,7 @@ class DocumentReaderClass {
                     embeddedPara = new XWPFParagraph(
                             CTP.Factory.parse(paraObject.xmlText()), paragraph.getBody());
                     //Here you have your paragraph;
-                    System.out.println(embeddedPara.getText());
+                    documentContent.append(embeddedPara.getText());
                 }
 
             } catch (XmlException e) {

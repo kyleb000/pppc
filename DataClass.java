@@ -23,6 +23,10 @@ class DataClass {
         this.reportPath = reportPath;
     }
 
+    void setDocumentContent(String documentContent){
+        this.documentContent = documentContent;
+    }
+
     int getCheckType(){
         return checkType;
     }
@@ -33,5 +37,9 @@ class DataClass {
 
     String getReportPath(){
         return reportPath;
+    }
+
+    String getDocumentContent(){
+        return documentContent;
     }
 }

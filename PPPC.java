@@ -99,7 +99,7 @@ public class PPPC{
         buttonPanel.setBorder(new EmptyBorder(10, paddingLeft, 10, paddingRight));
 
         dataClass = new DataClass();
-        readerClass = new DocumentReaderClass();
+        readerClass = new DocumentReaderClass(dataClass);
 
         mainLayout = new GridBagLayout();
         buttonLayout = new GridBagLayout();
@@ -268,6 +268,7 @@ public class PPPC{
             for (String docs : dataClass.getDocumentList()){
                 readerClass.setFilePath(docs);
                 readerClass.readFile();
+                System.out.println(dataClass.getDocumentContent());
             }
         });
     }
